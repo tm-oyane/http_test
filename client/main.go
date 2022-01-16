@@ -2,26 +2,20 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"net"
 	"time"
 
-	"io/ioutil"
 	"net/http"
 )
 
 func main() {
 	client := &http.Client{
-		Timeout: time.Second * 27,
-		Transport: &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout:   10 * time.Second,
-				KeepAlive: 10 * time.Second,
-			}).DialContext,
-			MaxIdleConns:          100,
-			MaxIdleConnsPerHost:   100,
-			IdleConnTimeout:       10 * time.Second,
-		},
+		Timeout: HttpClientTimeout,
+		//Transport: &http.Transport{
+		//	DialContext: (&net.Dialer{
+		//		KeepAlive: 15 * time.Second,
+		//	}).DialContext,
+		//	MaxIdleConnsPerHost: IdleConPerHost,
+		//},
 	}
 
 	fmt.Println("Write csv")
@@ -32,7 +26,13 @@ func main() {
 	}
 }
 
-const url = "http://localhost:8080/hello"
+const (
+	CacheTtl = 86400 * time.Second // 1日
+	HttpClientTimeout = 5 * time.Second
+	IdleConPerHost = 10
+	url = "http://localhost:8080/hello"
+)
+
 func request(client *http.Client, reqCnt int) {
 	req, _ := http.NewRequest(http.MethodGet, url, nil)
 
@@ -40,7 +40,7 @@ func request(client *http.Client, reqCnt int) {
 
 	res, err := client.Do(req)
 	if err != nil {
-		//fmt.Println("error req")
+		fmt.Println(err.Error())
 		return
 	}
 
@@ -48,8 +48,12 @@ func request(client *http.Client, reqCnt int) {
 	//fmt.Println(res.Header.Get("Keep-Alive"))
 	//fmt.Println(res.Header.Get("Content-Type"))
 
+	//var data *Res
+	//if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+	//}
+
 	defer func() {
-		io.Copy(ioutil.Discard, res.Body)
+		//io.Copy(ioutil.Discard, res.Body)
 		res.Body.Close()
 	}()
 
@@ -59,4 +63,8 @@ func request(client *http.Client, reqCnt int) {
 
 func timestamp() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
+}
+
+type Res struct {
+	Message string `json:"message"`
 }
